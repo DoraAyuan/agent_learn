@@ -143,6 +143,14 @@ agent_learn/
 ```bash
 pytest tests/ -v
 ```
+## Change Log
+
+| 日期 | 变更内容 |
+|------|---------|
+| 2026-05-01  | 修复：所有入口（main.py、crewai_crew.py、langgraph_agent.py）Windows GBK 编码问题（强制 UTF-8）；Server 默认端口 8000→8001 避免冲突；同步更新 Dockerfile、docker-compose.yml |
+| 2026-04-20  | 增量更新：新增 tests/、demos/、docs/ 模块 CLAUDE.md；Mermaid 图补充 click 链接；Module Index 表补充 CLAUDE.md 列；更新 index.json 至 v1.0 完整状态 |
+| 2026-04-04  | v1.0 增量更新：补充 FastAPI 服务化、Docker 容器化、pytest 测试套件、LangGraph/CrewAI demo、新增模块索引 |
+| 2026-03-05  | 初始化项目 AI 上下文文档 |
 
 ## 许可
 
