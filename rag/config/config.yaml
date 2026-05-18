@@ -1,0 +1,26 @@
+# 模型配置
+models:
+  chat: "qwen3:4b"           # 开发调试用
+  chat_large: "qwen3:8b"     # 对比实验 / 最终效果用
+  embedding: "bge-m3"  # BAAI 中文多语言 embedding，中文效果好
+
+# RAG 参数
+rag:
+  chunk_size: 512
+  chunk_overlap: 128
+  top_k: 5
+  similarity_threshold: 0.5
+  rerank_model: "BAAI/bge-reranker-base"  # cross-encoder 精排模型
+  rerank_fetch_k: 20                       # 粗检索条数，精排后保留 top_k
+
+# 知识库路径
+knowledge_base: "knowledge_base/tech"
+
+# API 配置
+api:
+  host: "0.0.0.0"
+  port: 8000
+
+# Ollama 连接
+ollama:
+  base_url: "http://localhost:11434"

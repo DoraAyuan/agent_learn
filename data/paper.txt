@@ -1,0 +1,13 @@
+Title: Deep Learning for Medical Image Analysis
+
+Abstract:
+Deep learning has significantly advanced the field of medical image analysis. This paper reviews the application of convolutional neural networks (CNNs) in tasks such as image classification, segmentation, and detection. In particular, U-Net and its variants have been widely used for medical image segmentation tasks.
+
+Methods:
+We investigate several deep learning architectures including CNN, U-Net, and ResNet. The models are trained on public datasets such as BraTS (brain tumor segmentation) and LUNA (lung nodule detection). Data augmentation techniques are used to improve generalization.
+
+Results:
+The experimental results show that deep learning models outperform traditional image processing methods. U-Net achieves high Dice scores in segmentation tasks, while ResNet-based models perform well in classification.
+
+Conclusion:
+Deep learning provides powerful tools for medical image analysis, but challenges remain in data scarcity, model interpretability, and clinical deployment.

@@ -1,0 +1,28 @@
+openai
+python-dotenv
+fastapi
+uvicorn[standard]
+pydantic
+
+# === demo 依赖 ===
+langgraph
+langchain-openai
+crewai
+litellm
+
+# === 测试依赖 ===
+pytest
+pytest-asyncio
+httpx
+
+# === 以下为 RAG 工具的可选依赖 ===
+# 仅在使用 rag_search 工具时需要
+# 如果不需要 RAG 功能，可以不安装
+
+# langchain-community
+# langchain-ollama
+# langchain-core
+# chromadb
+# sentence-transformers
+# pyyaml
+# pypdf

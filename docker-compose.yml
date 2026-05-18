@@ -1,0 +1,11 @@
+services:
+  agent-api:
+    build: .
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    volumes:
+      - ./skills:/app/skills
+      - ./data:/app/data
+    restart: unless-stopped

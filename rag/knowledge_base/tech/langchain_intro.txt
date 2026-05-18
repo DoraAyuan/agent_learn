@@ -1,0 +1,93 @@
+LangChain 框架入门指南
+
+一、什么是 LangChain？
+
+LangChain 是一个用于构建 LLM 应用的开源框架，它的核心定位是"大模型应用胶水框架"。它提供了一整套工具和抽象，帮助开发者将 LLM、检索器、工具、记忆等组件串联起来，构建复杂的 AI 应用。
+
+LangChain 的优势：
+1. 模块化设计：各组件可独立使用和替换
+2. 丰富的集成：支持 Ollama、OpenAI、Chroma、FAISS 等多种后端
+3. Chain 和 Agent：支持定义工作流和自主代理
+4. Prompt 管理：模板化 prompt，支持变量注入
+5. 生产就绪：LangServe、LangSmith 等配套工具
+
+二、核心组件
+
+2.1 Document Loaders（文档加载器）
+- TextLoader：加载 txt 文件
+- PyPDFLoader：加载 PDF
+- DirectoryLoader：批量加载目录
+- CSVLoader、JSONLoader 等
+
+2.2 Text Splitters（文本切分器）
+- RecursiveCharacterTextSplitter：递归按分隔符切分
+- MarkdownHeaderTextSplitter：按 Markdown 标题切分
+- TokenTextSplitter：按 token 数量切分
+
+2.3 Embeddings（向量化）
+- OllamaEmbeddings：使用 Ollama 本地模型生成 embedding
+- OpenAIEmbeddings：使用 OpenAI API
+- HuggingFaceEmbeddings：使用 HuggingFace 模型
+
+2.4 Vector Stores（向量存储）
+- Chroma：本地向量数据库，支持持久化
+- FAISS：高性能向量检索
+- 其他：Pinecone、Weaviate、Milvus
+
+2.5 Chains（链）
+- LLMChain：最简单的 LLM 调用链
+- RetrievalQA：检索式问答链
+- ConversationalRetrievalChain：带对话历史的检索链
+
+2.6 Prompt Templates
+- ChatPromptTemplate：对话格式的 prompt 模板
+- FewShotPromptTemplate：少样本学习模板
+- PipelinePromptTemplate：多步骤 prompt
+
+三、LangChain 与 LlamaIndex 的区别
+
+LangChain 和 LlamaIndex 都能做 RAG，但设计理念不同：
+
+LangChain：
+- 定位更广，不限于 RAG
+- 强项在流程编排、Agent、工具调用
+- 生态更丰富，社区更大
+- 适合构建复杂的 LLM 应用
+
+LlamaIndex：
+- 更专注于数据接入和检索
+- 强项在文档索引、查询引擎
+- 内置多种索引和检索策略
+- 适合以文档为中心的应用
+
+实际项目中两者常配合使用：LlamaIndex 管理数据和检索，LangChain 串联整体流程。
+
+四、使用 LangChain 构建 RAG 系统
+
+典型的 RAG chain：
+
+1. 创建 Document Loader 加载文档
+2. 使用 Text Splitter 切分文档
+3. 创建 Embedding 模型生成向量
+4. 创建 Vector Store 存储向量
+5. 创建 Retriever 从向量库检索
+6. 设计 Prompt Template
+7. 将 retriever、prompt、llm 组合为 chain
+8. 调用 chain.invoke() 即可
+
+代码量通常在 30-50 行即可完成一个完整的 RAG pipeline。
+
+五、LangChain 的常见坑
+
+1. 版本兼容性：LangChain 更新频繁，API 变化较大，建议锁定版本
+2. 过度抽象：简单的任务用 LangChain 反而增加代码量，按需使用
+3. 调试困难：chain 内部调用链路不透明，建议加日志
+4. 性能开销：框架引入的额外开销在简单场景下比较明显
+
+六、最佳实践
+
+1. 从简单开始：先用最基础的组件把链路跑通
+2. 渐进增强：逐步添加 rerank、混合检索等高级特性
+3. 关注 prompt：好的 prompt 设计比复杂的 chain 更重要
+4. 记录日志：记录每次检索和生成的结果，便于调试和评估
+5. 对比实验：对不同配置（chunk size、top-k、模型）做对比

@@ -1,0 +1,77 @@
+RAG（Retrieval-Augmented Generation，检索增强生成）技术详解
+
+一、什么是 RAG？
+
+RAG 是一种结合信息检索与文本生成的技术架构。它的核心思想是：在 LLM 生成回答之前，先从外部知识库中检索相关文档片段，然后将这些片段与用户问题一起交给 LLM，使其能够基于外部知识生成更准确、更具时效性的回答。
+
+RAG 的完整流程包括以下几个步骤：
+1. 文档加载（Document Loading）：从本地文件、数据库或 API 中读取原始文档
+2. 文档切分（Chunking）：将长文档按语义边界切分成适当大小的文本块
+3. 向量化（Embedding）：使用 embedding 模型将文本块转换为高维向量
+4. 向量存储（Vector Store）：将向量存入 Chroma、FAISS 等向量数据库
+5. 检索（Retrieval）：将用户问题向量化后，在向量库中进行相似度搜索
+6. 增强（Augmentation）：将检索到的 top-k 片段拼接到 prompt 中
+7. 生成（Generation）：LLM 基于增强后的 prompt 生成最终回答
+
+二、RAG 的核心优势
+
+1. 减少幻觉（Hallucination）：模型回答基于检索到的真实文档，而非仅依赖参数记忆
+2. 知识更新：无需重新训练模型，只需更新知识库即可
+3. 可追溯性：回答可以附上引用来源，便于验证
+4. 领域适配：可针对特定领域构建专用知识库
+
+三、关键技术细节
+
+3.1 Chunk（文本块）策略
+
+Chunk 大小是 RAG 系统中最重要的超参数之一：
+- 太小的 chunk（< 256 token）：可能丢失上下文，导致检索碎片化
+- 太大的 chunk（> 2048 token）：检索精度下降，噪声增加
+- 推荐范围：512-1024 token，overlap 设为 chunk_size 的 20-25%
+
+3.2 Embedding 模型选择
+
+常用的 embedding 模型包括：
+- nomic-embed-text：Ollama 内置，轻量高效
+- BGE-M3：多语言支持好，适合中文场景
+- text-embedding-3-small：OpenAI 方案，需要 API key
+
+3.3 向量数据库对比
+
+Chroma 和 FAISS 是 RAG 中最常用的两种向量存储方案：
+- Chroma：完整的向量数据库，支持持久化、metadata 过滤、集合管理，适合应用开发
+- FAISS：Meta 开发的高性能向量检索库，检索速度更快但功能更底层，适合大规模检索
+
+3.4 Prompt 工程
+
+RAG 系统的 prompt 通常包含：
+- 系统角色定义
+- 上下文（检索到的文档片段）
+- 回答规则（仅基于上下文、引用来源、拒答策略）
+- 用户问题
+
+四、RAG 的局限性
+
+1. 检索质量依赖：如果检索到的文档不相关，回答质量会显著下降
+2. Chunk 切分困难：文档中的表格、公式、代码可能被不当切分
+3. 上下文窗口限制：top-k 片段的总长度必须在 LLM 上下文窗口内
+4. 不支持复杂推理：简单 RAG 无法处理需要多步推理的问题
+
+五、进阶方向
+
+1. Hybrid Search（混合检索）：结合向量检索和关键词检索（BM25）
+2. Rerank：使用重排序模型对检索结果二次排序
+3. Graph RAG：引入知识图谱增强检索（如 LightRAG）
+4. Agentic RAG：让模型自主决定检索时机和策略
+
+六、本地部署实践
+
+使用 Ollama + LangChain + Chroma 可以在一台普通电脑上构建完整的 RAG 系统：
+- Ollama 负责本地运行开源 LLM 和 embedding 模型
+- LangChain 负责串联各组件，管理 prompt 和 chain
+- Chroma 负责向量存储和检索
+
+推荐模型选择：
+- 小模型（4B）：Qwen3:4B，适合开发调试，推理速度快
+- 中等模型（8B）：Qwen3:8B，RAG 回答质量明显更好
+- 大模型（14B+）：需要 8GB 以上显存，建议量化后使用
