@@ -2,6 +2,7 @@ import json
 from typing import Callable, Generator, Optional
 from openai import OpenAI
 from app.config import get_settings
+from app.logger import info, warning
 
 
 class LLMClient:
@@ -186,10 +187,9 @@ class LLMClient:
                     except json.JSONDecodeError:
                         arguments = {}
 
-                    print(f"\n[Tool] 调用{func_name}({arguments})")
-
+                    info(f"调用工具 {func_name}({arguments})")
                     tool_result = tool_executor(func_name, arguments)
-                    print(f"[Tool] {func_name}返回: {tool_result[:200]}")
+                    info(f"{func_name} 返回: {tool_result[:200]}")
 
                     current_messages.append({
                         "role": "tool",
@@ -202,7 +202,7 @@ class LLMClient:
             # content和tool_calls都为空
             return result["content"] or ""
 
-        print(f"\n[警告] 工具调用已达到最大轮数({max_rounds})，强制返回")
+        warning(f"工具调用达到最大轮数({max_rounds})，强制返回")
         return result.get("content") or ""
 
     def chat_stream_yield(

@@ -1,10 +1,10 @@
 import os
-from app.tools.file_reader import read_text_file, resolve_txt_file_path
+from app.tools.file_reader import read_file as _read_file, resolve_file_path
 
 
 def read_file(file_path: str) -> str:
     """
-    读取指定路径的文本文件
+    读取指定路径的文件（支持 .txt / .md / .docx）
 
     Args:
         file_path: 文件路径，相对或绝对路径均可
@@ -12,13 +12,13 @@ def read_file(file_path: str) -> str:
     Returns:
         文件内容，截取前5000字符，文件不存在时返回错误信息
     """
-    resolved = resolve_txt_file_path(file_path)
+    resolved = resolve_file_path(file_path)
 
     if resolved:
-        content = read_text_file(resolved)
+        content = _read_file(resolved)
     else:
         if os.path.exists(file_path):
-            content = read_text_file(file_path)
+            content = _read_file(file_path)
         else:
             return f"[错误] 文件不存在: {file_path}"
 
@@ -75,9 +75,9 @@ def register_file_reader_tools(registry) -> None:
     registry.register(
         name="read_text_file",
         description=(
-            "读取本地文本文件的内容。"
+            "读取本地文件的内容。"
             "当用户要求读取文件、分析文件内容、或者提到了具体文件路径时使用。"
-            "支持.txt和.md文件。"
+            "支持.txt、.md、.docx文件。"
         ),
         parameters={
             "type": "object",

@@ -19,6 +19,8 @@ httpx
 # 仅在使用 rag_search 工具时需要
 # 如果不需要 RAG 功能，可以不安装
 
+python-docx
+
 # langchain-community
 # langchain-ollama
 # langchain-core

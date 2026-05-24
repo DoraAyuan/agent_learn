@@ -47,7 +47,8 @@ class ToolRegistry:
             func:        实际执行的函数
         """
         if name in self._tools:
-            print(f"[ToolRegistry] 警告: 工具'{name}'已存在，将被覆盖")
+            from app.logger import warning
+            warning(f"工具'{name}'已存在，将被覆盖")
 
         self._tools[name] = Tool(
             name=name,

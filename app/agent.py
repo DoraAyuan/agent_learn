@@ -1,4 +1,6 @@
+import os
 from typing import Generator
+from app.logger import info, warning, error
 from app.skill_loader import load_all_skills
 from app.skill_selector import select_skill
 from app.llm_client import LLMClient
@@ -8,6 +10,7 @@ from app.tools.file_reader import prepare_user_query
 from app.tools.datetime_tool import register_datetime_tools
 from app.tools.file_reader_tool import register_file_reader_tools
 from app.tools.rag_tool import register_rag_tools
+from app.security import sanitize_user_input, truncate_input
 
 
 class Agent:
@@ -22,6 +25,7 @@ class Agent:
         初始化LLM客户端、加载技能、注册工具、创建对话记忆
         """
         self.llm = LLMClient()
+        self.llm_fast = None  # 低成本模型，懒加载
         self.skills = load_all_skills()
         self.memory = ConversationMemory(llm=self.llm)
         self.tool_registry = ToolRegistry()
@@ -35,7 +39,40 @@ class Agent:
         register_rag_tools(self.tool_registry)
 
         tools = self.tool_registry.list_tools()
-        print(f"\n[Agent] 已注册{len(tools)}个工具: {tools}")
+        info(f"已注册{len(tools)}个工具: {tools}")
+
+    def _get_llm(self, user_query: str) -> LLMClient:
+        """
+        成本优化：根据用户查询复杂度选择模型
+
+        简单查询（短、无分析类关键词）使用低成本模型，
+        复杂查询使用默认模型。
+
+        Args:
+            user_query: 用户原始输入
+
+        Returns:
+            选定的 LLMClient 实例
+        """
+        fast_model = os.getenv("MODEL_FAST_NAME", "")
+        if not fast_model:
+            return self.llm
+
+        # 简单判断：短查询 + 无复杂分析意图 → 快速模型
+        complex_keywords = ["总结", "分析", "对比", "解释", "调试", "翻译", "长文"]
+        is_simple = (
+            len(user_query) < 50
+            and not any(kw in user_query for kw in complex_keywords)
+        )
+
+        if is_simple:
+            if self.llm_fast is None:
+                self.llm_fast = LLMClient()
+                self.llm_fast.model = fast_model
+                info(f"已初始化低成本模型: {fast_model}")
+            return self.llm_fast
+
+        return self.llm
 
     def run(self, user_query: str) -> str:
         """
@@ -48,6 +85,12 @@ class Agent:
             Agent的回答文本
         """
         user_query = prepare_user_query(user_query)
+        user_query = truncate_input(user_query)
+
+        security_block = sanitize_user_input(user_query)
+        if security_block:
+            info("用户输入被安全模块拦截")
+            return security_block
 
         self.memory.add_user_message(user_query)
 
@@ -57,13 +100,14 @@ class Agent:
 
         tools_schema = self.tool_registry.get_tools_schema()
 
-        print("\n[Agent] 正在处理...")
-        response = self._execute_with_tools(messages, tools_schema, user_query)
+        llm = self._get_llm(user_query)
+        info(f"正在处理用户请求... (模型: {llm.model})")
+        response = self._execute_with_tools(messages, tools_schema, user_query, llm)
 
         if response:
             print(f"\n{response}")
         else:
-            response = self._run_skill(user_query)
+            response = self._run_skill(user_query, llm)
 
         if response:
             self.memory.add_assistant_message(response)
@@ -71,7 +115,8 @@ class Agent:
         return response
 
     def _execute_with_tools(
-        self, messages: list, tools_schema: list, user_query: str
+        self, messages: list, tools_schema: list, user_query: str,
+        llm: LLMClient | None = None
     ) -> str:
         """
         使用execute_tool_loop执行带工具的LLM调用
@@ -79,11 +124,14 @@ class Agent:
         Returns:
             LLM的文本回复，空字符串表示需要回退到skill
         """
+        if llm is None:
+            llm = self.llm
+
         if not tools_schema:
             return ""
 
         try:
-            response = self.llm.execute_tool_loop(
+            response = llm.execute_tool_loop(
                 messages=messages,
                 tools=tools_schema,
                 tool_executor=self.tool_registry.execute,
@@ -91,31 +139,35 @@ class Agent:
             )
             return response
         except Exception as e:
-            print(f"\n[Agent] 工具调用出错: {e}")
+            error(f"工具调用出错: {e}")
             return ""
 
-    def _run_skill(self, user_query: str) -> str:
+    def _run_skill(self, user_query: str, llm: LLMClient | None = None) -> str:
         """
         回退方案: 使用原有skill系统执行
 
         Args:
             user_query: 用户查询
+            llm: 可选的LLM客户端，不传则使用默认
 
         Returns:
             skill执行结果
         """
-        print("\n[Agent] 未触发工具调用，回退到skill模式...")
+        if llm is None:
+            llm = self.llm
+
+        warning("未触发工具调用，回退到skill模式")
 
         skill_name, prompt = self._build_skill_prompt(user_query)
 
-        print(f"[2] 已选择skill: {skill_name}")
+        info(f"已选择skill: {skill_name}")
 
         messages = [
             {"role": "system", "content": prompt},
             {"role": "user", "content": user_query},
         ]
 
-        response = self.llm.chat_stream(messages)
+        response = llm.chat_stream(messages)
         return response
 
     def _build_skill_prompt(self, user_query: str) -> tuple[str, str]:
@@ -128,15 +180,15 @@ class Agent:
         Returns:
             (skill_name, system_prompt) 元组
         """
-        print("[1] 正在选择skill...")
+        info("正在选择skill...")
         selection = select_skill(user_query, self.skills, llm=self.llm)
 
         skill_name = selection["skill_name"]
         reason = selection.get("reason", "")
 
-        print(f"[2] 已选择skill: {skill_name}")
+        info(f"已选择skill: {skill_name}")
         if reason:
-            print(f"[2.1] 选择理由: {reason}")
+            info(f"选择理由: {reason}")
 
         if skill_name not in self.skills:
             raise ValueError(f"模型返回了不存在的skill: {skill_name}")
@@ -194,7 +246,18 @@ Constraints:
             事件字典
         """
         user_query = prepare_user_query(user_query)
+        user_query = truncate_input(user_query)
+
+        security_block = sanitize_user_input(user_query)
+        if security_block:
+            info("用户输入被安全模块拦截")
+            yield {"type": "text", "content": security_block}
+            yield {"type": "done", "full_response": security_block}
+            return
+
         self.memory.add_user_message(user_query)
+
+        llm = self._get_llm(user_query)
 
         system_prompt = self._build_system_prompt()
         history_messages = self.memory.get_messages()
@@ -205,7 +268,7 @@ Constraints:
 
         if tools_schema:
             try:
-                for event in self.llm.execute_tool_loop_stream(
+                for event in llm.execute_tool_loop_stream(
                     messages=messages,
                     tools=tools_schema,
                     tool_executor=self.tool_registry.execute,
@@ -227,7 +290,7 @@ Constraints:
                 {"role": "user", "content": user_query},
             ]
 
-            for text in self.llm.chat_stream_yield(skill_messages):
+            for text in llm.chat_stream_yield(skill_messages):
                 full_response += text
                 yield {"type": "text", "content": text}
 
@@ -293,7 +356,7 @@ Constraints:
     def clear_memory(self) -> None:
         """清空对话记忆"""
         self.memory.clear()
-        print("[Agent] 对话记忆已清空")
+        info("对话记忆已清空")
 
     def get_memory_info(self) -> dict:
         """返回当前记忆的状态信息"""

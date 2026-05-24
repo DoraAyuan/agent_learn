@@ -1,5 +1,6 @@
 from typing import Optional
 from app.llm_client import LLMClient
+from app.logger import info, error
 
 
 class ConversationMemory:
@@ -140,10 +141,10 @@ class ConversationMemory:
                 self._summary = new_summary
 
             self._messages = self._messages[split_point:]
-            print(f"\n[Memory] 对话已压缩: {split_point}条消息→摘要，保留{len(self._messages)}条")
+            info(f"对话已压缩: {split_point}条→摘要，保留{len(self._messages)}条")
 
         except Exception as e:
-            print(f"\n[Memory] 对话压缩失败: {e}")
+            error(f"对话压缩失败: {e}")
 
     def _format_messages_for_summary(self, messages: list[dict]) -> str:
         """将消息列表格式化为可读文本用于摘要"""
