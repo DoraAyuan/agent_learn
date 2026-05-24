@@ -8,6 +8,8 @@
 
 - CLI 交互入口与特殊命令
 - Agent 核心调度（工具优先 → 技能回退）
+- 输入安全检测（提示词注入防御 + 长度截断）
+- 模型分级调度（简单查询低成本模型，复杂查询默认模型）
 - Function Calling 工具注册与分发
 - RAG 知识库检索工具集成（跨项目、懒加载、优雅降级）
 - 对话记忆管理（滑动窗口 + LLM摘要压缩）
@@ -15,6 +17,7 @@
 - 基于 LLM 的技能选择路由
 - OpenAI 兼容 API 的通信封装（4种调用模式）
 - FastAPI REST API 服务（同步+SSE流式）
+- 结构化日志（控制台 INFO + 文件 DEBUG 双输出）
 
 ## Entry and Startup
 
@@ -48,6 +51,9 @@ API 服务启动流程：
 ```
 用户输入
   --> file_reader(文件预处理)
+  --> truncate_input(长度截断, 最大4000字符)
+  --> sanitize_user_input(注入检测, 16种模式匹配)
+  --> _get_llm(模型分级: 简单查询→低成本模型, 复杂查询→默认模型)
   --> memory.add_user_message(存入记忆)
   --> _build_system_prompt(含工具说明+技能列表+对话摘要)
   --> memory.get_messages(获取历史)
@@ -99,6 +105,7 @@ API 服务启动流程：
 |------|------|
 | `openai` | OpenAI 兼容 API 客户端 |
 | `python-dotenv` | `.env` 文件环境变量加载 |
+| `python-docx` | Word 文档 (.docx) 解析 |
 
 ### RAG 工具可选依赖
 使用时需安装：`pyyaml`, `chromadb`, `langchain-community`, `langchain-ollama`, `langchain-core`, `sentence-transformers`, `pypdf`
@@ -109,6 +116,7 @@ API 服务启动流程：
 | `MODEL_API_KEY` | LLM API 密钥 | 是 |
 | `MODEL_BASE_URL` | LLM API 基础 URL | 是 |
 | `MODEL_NAME` | 使用的模型名称 | 是 |
+| `MODEL_FAST_NAME` | 低成本模型名称（可选，用于简单查询成本优化） | 否 |
 
 ## Related File List
 
@@ -132,6 +140,8 @@ API 服务启动流程：
 | `api/__init__.py` | API包初始化 |
 | `api/schemas.py` | Pydantic请求/响应模型 |
 | `api/routes.py` | API端点路由，SSE流式处理 |
+| `security.py` | 输入安全：注入检测 + 长度截断 |
+| `logger.py` | 结构化日志：控制台 + 文件双输出 |
 | `test_llm.py` | LLM客户端测试 |
 | `test_loader.py` | 技能加载测试 |
 | `test_selector.py` | 技能选择测试 |
@@ -145,6 +155,7 @@ API 服务启动流程：
 
 | 日期 | 变更内容 |
 |------|---------|
+| 2026-05-24 | 新增 security.py 提示词安全 + agent.py 模型分级调度 + file_reader .docx支持 + logger.py 结构化日志 |
 | 2026-05-14 | v1.0: FastAPI服务化、Docker容器化、pytest（20用例）、LangGraph/CrewAI demo |
 | 2026-05-14 | v0.3: 全量代码按coding_standards.md规范化 |
 | 2026-05-14 | v0.2: 新增Function Calling、RAG工具、对话记忆 |
